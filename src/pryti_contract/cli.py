@@ -67,6 +67,30 @@ def cmd_diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_invariants(args: argparse.Namespace) -> int:
+    """Emit a confirmed-invariant corpus for pryti-semantic-reviewer --invariants."""
+    sys.path.insert(0, str(Path(args.root).resolve()))
+    _setup_django(args.settings)
+    for mod in args.import_module or []:
+        importlib.import_module(mod)
+
+    from .invariants import to_invariant_corpus
+
+    corpus = to_invariant_corpus(build(include_django=not args.no_django))
+    text = json.dumps(corpus, indent=2)
+    if args.output:
+        Path(args.output).write_text(text + "\n", encoding="utf-8")
+        dests = corpus[0]["observed"]["destinations"]
+        print(
+            f"wrote {args.output}: {len(corpus)} confirmed invariants, "
+            f"{len(dests)} egress destination(s)",
+            file=sys.stderr,
+        )
+    else:
+        print(text)
+    return 0
+
+
 def cmd_suggest(args: argparse.Namespace) -> int:
     """Print declarations discovered by a recorded run (e.g. your test suite)."""
     data = json.loads(Path(args.observed).read_text(encoding="utf-8"))
@@ -95,6 +119,16 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--markdown", action="store_true", help="format for a PR comment")
     d.add_argument("--fail-on", choices=["never", "risky", "review", "any"], default="never")
     d.set_defaults(func=cmd_diff)
+
+    inv = sub.add_parser(
+        "invariants", help="emit a confirmed-invariant corpus for the reviewer's --invariants"
+    )
+    inv.add_argument("-o", "--output")
+    inv.add_argument("--settings", help="DJANGO_SETTINGS_MODULE")
+    inv.add_argument("--root", default=".", help="project root to put on sys.path")
+    inv.add_argument("--import-module", action="append", help="extra modules to import")
+    inv.add_argument("--no-django", action="store_true")
+    inv.set_defaults(func=cmd_invariants)
 
     s = sub.add_parser("suggest", help="turn a recorded run into declarations")
     s.add_argument("observed", help="JSON from guard.suggestions()")
