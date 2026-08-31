@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pryti-contract"
+version = "0.1.0"
+description = "Your backend keeps a list of what it does, and cannot lie about it."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+django = ["django>=4.2"]
+dev = ["pytest>=7", "django>=4.2"]
+
+[project.scripts]
+pryti-contract = "pryti_contract.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
