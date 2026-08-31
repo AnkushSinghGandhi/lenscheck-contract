@@ -3,7 +3,7 @@
 One AI-written PR — *"add order analytics"* — sneaks in three dangerous changes.
 `pryti-contract` catches all three: two structurally in CI, one at runtime.
 
-![money shot](money-shot.png)
+![money shot](three-bad-things.gif)
 
 ## The PR
 
@@ -27,9 +27,11 @@ bash examples/three_bad_things/run.sh
 `before/` is the good app; `after/` is the same app with the three changes. Diff them
 yourself — the whole PR is six lines.
 
-## Render the GIF (optional)
+## Re-render the assets (optional)
 
 ```bash
-# needs https://github.com/charmbracelet/vhs
-vhs examples/three_bad_things/three-bad-things.tape   # -> three-bad-things.gif
+python3 examples/three_bad_things/render_gif.py   # -> three-bad-things.gif (Chrome + Pillow)
 ```
+
+`money-shot.png` is a static frame for social cards; `three-bad-things.tape` is a
+[vhs](https://github.com/charmbracelet/vhs) script if you'd rather record the live terminal.
