@@ -1,0 +1,56 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  :root{--bg:#0b0e14;--panel:#0f141d;--panel2:#131823;--line:#232a38;--text:#e6edf3;
+        --muted:#93a1b0;--accent:#a855f7;--crit:#f85149;--low:#3fb950;--cyan:#58a6ff;--yellow:#e3b341}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--bg)}
+  body{padding:40px;font:15px/1.65 "SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       color:var(--text);-webkit-font-smoothing:antialiased;width:940px}
+  .term{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+        box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  .spectrum{height:4px;background:linear-gradient(90deg,#f85149,#f0883e,#e3b341,#3fb950,#58a6ff,#a855f7)}
+  .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .d1{background:#f85149}.d2{background:#e3b341}.d3{background:#3fb950}
+  .bar .who{margin-left:10px;color:var(--muted);font-size:13px}.bar .who b{color:var(--accent)}
+  .body{padding:22px 26px;min-height:560px}
+  .r{display:none}
+  .pr{font-weight:700;font-size:16px}.pr .meta{color:var(--muted);font-weight:400}.tag{color:var(--muted);font-size:13px}
+  .layer{color:var(--cyan);margin:20px 0 10px;font-size:13.5px}.layer b{color:#7ac0ff}
+  .h{color:var(--muted)}
+  .risk .n{color:var(--crit)} .risk{color:var(--text)}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:8px}
+  .exit{margin-top:10px}.exit b{color:var(--text)}
+  .block{color:var(--crit);font-weight:700}.ok{color:var(--low);font-weight:700;margin-top:12px}
+  .decl{color:var(--muted);font-size:13.5px;white-space:pre-wrap;margin-top:10px}
+  .decl .eff{color:var(--yellow)}.decl .good{color:var(--low)}
+  .foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-weight:800;font-size:17px}.foot .z{color:var(--accent)}
+  .brand{margin-top:12px;color:var(--muted);font-size:13px}.brand b{color:var(--accent)}
+  .indent{padding-left:14px}
+  .cur{color:var(--accent)}
+</style></head><body>
+  <div class="term">
+    <div class="spectrum"></div>
+    <div class="bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+      <span class="who">✦ <b>pryti-contract</b> · examples/three_bad_things</span></div>
+    <div class="body">
+      <div class="r" data-s="1"><div class="pr">▌ PR #128 · "add order analytics" <span class="meta">· +4 −2 &nbsp;<span class="tag">looks harmless</span></span></div></div>
+      <div class="r" data-s="2"><div class="layer">── Layer 2 · <b>pryti-contract diff</b> &nbsp;(structural — runs in CI) ──</div><div class="h">### Backend contract changes</div><div>&nbsp;</div></div>
+      <div class="r" data-s="3"><div class="risk">- 🔴 <code>POST /orders</code> — auth: user -&gt; public</div></div>
+      <div class="r" data-s="4"><div class="risk">- 🔴 <code>shop.Customer.name</code> — field removed (data loss)</div></div>
+      <div class="r" data-s="5"><div class="sub"><i>2 risky, 2 total.</i></div><div class="exit indent"><span class="h">exit 1 →</span> <b>CI blocked</b> <span class="tag">(#1 auth + #2 field caught before merge)</span></div></div>
+      <div class="r" data-s="6"><div class="layer">── Layer 3 · <b>pryti-contract guard</b> &nbsp;(runtime — in the running app) ──</div></div>
+      <div class="r" data-s="7"><div class="indent"><span class="block">⛔ BLOCKED at runtime</span> <span class="h">— the call never left the process:</span></div>
+        <div class="decl indent">  shop.views.create_order performed undeclared effect <span class="eff">'net:analytics.tracksy.io'</span>.
+  Declared: <span class="good">['net:api.stripe.com']</span>. Add <span class="eff">@contract.effects('net:analytics.tracksy.io')</span> or remove the call.</div></div>
+      <div class="r" data-s="8"><div class="indent ok">✓ data exfiltration stopped</div></div>
+      <div class="r" data-s="9"><div class="foot">▌ 3 bad things in. <span class="z">0 shipped.</span></div>
+        <div class="brand">✦ <b>pryti-contract</b> — your backend keeps a list of what it does, and can't lie about it.</div></div>
+    </div>
+  </div>
+<script>
+  var n = parseInt((location.search.match(/n=(\d+)/)||[])[1] || "99", 10);
+  document.querySelectorAll(".r").forEach(function(el){
+    if (parseInt(el.getAttribute("data-s"),10) <= n) el.style.display = "block";
+  });
+</script>
+</body></html>
