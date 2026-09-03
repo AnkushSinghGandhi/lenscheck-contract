@@ -18,6 +18,14 @@ from .registry import current_handler, registry
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "::"}
 
+# Django cache methods → the effect they record (reads vs mutations/invalidations)
+CACHE_OPS = {
+    "get": "cache:read", "get_many": "cache:read", "has_key": "cache:read",
+    "set": "cache:write", "set_many": "cache:write", "add": "cache:write",
+    "delete": "cache:write", "delete_many": "cache:write", "clear": "cache:write",
+    "incr": "cache:write", "decr": "cache:write",
+}
+
 
 class UndeclaredEffect(RuntimeError):
     """Raised when a handler does something it did not declare."""
@@ -31,6 +39,7 @@ class _Guard:
         self.violations: list[tuple[str, str]] = []
         self._lock = threading.Lock()
         self._originals: dict[str, Any] = {}
+        self._cache_patches: list[tuple[type, str, Any]] = []   # (backend class, op, original)
         self._ip_to_host: dict[str, str] = {}
 
     # ---------- lifecycle ----------
@@ -67,6 +76,7 @@ class _Guard:
         socket.getaddrinfo = getaddrinfo  # type: ignore[assignment]
         socket.socket.connect = connect  # type: ignore[assignment,method-assign]
         self._install_smtp()
+        self._install_cache()
 
     def _install_smtp(self) -> None:
         try:
@@ -82,6 +92,39 @@ class _Guard:
 
         smtplib.SMTP.sendmail = sendmail  # type: ignore[method-assign]
 
+    def _install_cache(self) -> None:
+        """Record Django cache reads/invalidations as `cache:read` / `cache:write` effects. We patch
+        the *concrete* backend class (LocMemCache, RedisCache, …) — backends override get/set/delete,
+        so patching BaseCache would miss them. Observe-only (see `_check`): cache is in-process and
+        benign, so it's surfaced for the contract, never enforced."""
+        try:
+            from django.conf import settings
+            from django.core.cache import caches
+            aliases = list(getattr(settings, "CACHES", {}) or {}) or ["default"]
+        except Exception:  # noqa: BLE001 - Django absent/unconfigured (e.g. a non-Django test) → skip
+            return
+        guard = self
+        for alias in aliases:
+            try:
+                cls = type(caches[alias])
+            except Exception:  # noqa: BLE001 - a misconfigured alias must not break install
+                continue
+            if any(c is cls for c, _, _ in self._cache_patches):   # already patched this class
+                continue
+            for op, effect in CACHE_OPS.items():
+                orig = getattr(cls, op, None)
+                if not callable(orig):
+                    continue
+                self._cache_patches.append((cls, op, orig))
+
+                def wrap(orig: Any, effect: str) -> Any:
+                    def wrapper(self_: Any, *a: Any, **kw: Any) -> Any:
+                        guard._check(effect, "cache")
+                        return orig(self_, *a, **kw)
+                    return wrapper
+
+                setattr(cls, op, wrap(orig, effect))
+
     def uninstall(self) -> None:
         if "getaddrinfo" in self._originals:
             socket.getaddrinfo = self._originals["getaddrinfo"]  # type: ignore[assignment]
@@ -90,6 +133,9 @@ class _Guard:
             import smtplib
 
             smtplib.SMTP.sendmail = self._originals["sendmail"]  # type: ignore[method-assign]
+        for cls, op, orig in self._cache_patches:
+            setattr(cls, op, orig)
+        self._cache_patches.clear()
         self._originals.clear()
         self.mode = "off"
 
@@ -112,6 +158,10 @@ class _Guard:
         handler = current_handler.get()
         with self._lock:
             self.observed.setdefault(handler or "<no handler>", set()).add(effect)
+
+        # cache is in-process and benign: recorded (for the contract + suggestions), never enforced.
+        if effect.startswith("cache:"):
+            return
 
         # Nothing to enforce against outside a declared handler.
         if handler is None or self.mode == "record":

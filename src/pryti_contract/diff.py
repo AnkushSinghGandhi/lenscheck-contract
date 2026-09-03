@@ -31,6 +31,13 @@ def _is_weak(auth: str) -> bool:
     return auth.strip().lower() in WEAK_AUTH
 
 
+def _effect_severity(effect: str) -> str:
+    # a new outbound/net/email effect is risky; a cache op is lower (invalidation worth a look, read info)
+    if effect.startswith("cache:"):
+        return REVIEW if effect == "cache:write" else INFO
+    return RISKY
+
+
 def diff(base: Contract, head: Contract) -> list[Change]:
     changes: list[Change] = []
     _diff_routes(base, head, changes)
@@ -65,7 +72,7 @@ def _diff_routes(base: Contract, head: Contract, out: list[Change]) -> None:
         added = sorted(set(h.effects) - set(b.effects))
         removed = sorted(set(b.effects) - set(h.effects))
         for e in added:
-            out.append(Change(RISKY, "effect_added", key, f"new effect: {e}"))
+            out.append(Change(_effect_severity(e), "effect_added", key, f"new effect: {e}"))
         for e in removed:
             out.append(Change(INFO, "effect_removed", key, f"effect gone: {e}"))
         if b.handler != h.handler:
@@ -81,7 +88,10 @@ def _diff_models(base: Contract, head: Contract, out: list[Change]) -> None:
         out.append(Change(RISKY, "model_removed", name, "model removed"))
 
     for name in sorted(set(base.models) & set(head.models)):
-        bf, hf = base.models[name].fields, head.models[name].fields
+        bm, hm = base.models[name], head.models[name]
+        if bm.table and hm.table and bm.table != hm.table:
+            out.append(Change(RISKY, "table_renamed", name, f"table: {bm.table} -> {hm.table}"))
+        bf, hf = bm.fields, hm.fields
         for f in sorted(set(hf) - set(bf)):
             out.append(Change(INFO, "field_added", f"{name}.{f}", f"new field ({hf[f].get('type')})"))
         for f in sorted(set(bf) - set(hf)):
@@ -121,7 +131,7 @@ def _diff_jobs(base: Contract, head: Contract, out: list[Change]) -> None:
         if b.schedule != h.schedule:
             out.append(Change(REVIEW, "job_rescheduled", name, f"{b.schedule} -> {h.schedule}"))
         for e in sorted(set(h.effects) - set(b.effects)):
-            out.append(Change(RISKY, "effect_added", name, f"new effect: {e}"))
+            out.append(Change(_effect_severity(e), "effect_added", name, f"new effect: {e}"))
 
 
 def _diff_coverage(base: Contract, head: Contract, out: list[Change]) -> None:

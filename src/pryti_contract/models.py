@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @dataclass
@@ -25,6 +25,7 @@ class Route:
 @dataclass
 class Model:
     name: str
+    table: str = ""                 # the real SQL table (Meta.db_table); "" = Django's default
     fields: dict[str, dict[str, Any]] = field(default_factory=dict)
     source: str = "runtime"
 

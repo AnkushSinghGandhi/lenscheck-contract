@@ -181,3 +181,20 @@ def test_identical_contracts_have_no_changes():
     head = _c([{"method": "GET", "path": "/x", "handler": "h", "auth": "user"}])
     assert diff(base, head) == []
     assert render_text([]) == "No contract changes."
+
+
+def test_table_rename_is_risky():
+    base = _c(models=[{"name": "app.Order", "table": "orders", "fields": {}}])
+    head = _c(models=[{"name": "app.Order", "table": "orders_v2", "fields": {}}])
+    changes = diff(base, head)
+    assert any(c.kind == "table_renamed" and c.severity == "risky" for c in changes)
+
+
+def test_new_cache_effect_is_lower_severity_than_network():
+    route = lambda effects: {"method": "GET", "path": "/x", "handler": "h", "auth": "user", "effects": effects}
+    base = _c([route([])])
+    head = _c([route(["cache:write", "cache:read", "net:api.x.com"])])
+    sev = {c.detail: c.severity for c in diff(base, head)}
+    assert sev["new effect: cache:write"] == "review"      # invalidation → worth a look
+    assert sev["new effect: cache:read"] == "info"         # read → informational
+    assert sev["new effect: net:api.x.com"] == "risky"     # outbound network → risky

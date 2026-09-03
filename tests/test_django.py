@@ -75,3 +75,38 @@ def test_coverage_is_reported_honestly():
     c = build()
     assert c.coverage.routes_total > 0
     assert c.coverage.routes_with_auth < c.coverage.routes_total
+
+
+def test_empty_and_allowany_permission_classes_read_as_public():
+    # an empty permission_classes = [] means no checks → open, not "unknown"; AllowAny → open too
+    from pryti_contract.django_probe import _auth_of
+
+    open_view = type("OpenView", (), {"permission_classes": []})
+    allowany = type("AllowAny", (), {})
+    wide_view = type("WideView", (), {"permission_classes": [allowany]})
+    assert _auth_of(type("cb", (), {"view_class": open_view})()) == "public"
+    assert _auth_of(type("cb", (), {"view_class": wide_view})()) == "public"
+
+
+def test_model_records_its_sql_table():
+    from pryti_contract import build
+
+    c = build()
+    assert c.models["shop.Customer"].table == "shop_customer"   # Django's default table name, captured
+
+
+def test_cache_ops_are_recorded_as_effects():
+    from django.core.cache import cache
+
+    from pryti_contract import guard
+
+    guard.reset()
+    guard.install(mode="record")
+    try:
+        cache.set("k", 1)
+        cache.get("k")
+        cache.delete("k")
+    finally:
+        observed = {e for effects in guard.suggestions().values() for e in effects}
+        guard.uninstall()
+    assert "cache:write" in observed and "cache:read" in observed
