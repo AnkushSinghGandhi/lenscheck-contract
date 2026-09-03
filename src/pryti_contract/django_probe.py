@@ -30,7 +30,7 @@ def _probe_models(contract: Contract) -> None:
 
     for model in apps.get_models():
         meta = model._meta
-        entry = Model(name=meta.label)
+        entry = Model(name=meta.label, table=meta.db_table)
         for f in meta.get_fields():
             if not getattr(f, "concrete", False) and not f.is_relation:
                 continue
@@ -122,7 +122,10 @@ def _auth_of(callback: Any) -> str:
 
     perms = getattr(view_class, "permission_classes", None)
     if perms:
-        return "+".join(sorted(p.__name__ for p in perms))
+        names = sorted(p.__name__ for p in perms)
+        return "public" if names == ["AllowAny"] else "+".join(names)
+    if perms is not None:            # explicitly `permission_classes = []` → no checks → open
+        return "public"
 
     if view_class is not None:
         mro = {c.__name__ for c in getattr(view_class, "__mro__", ())}
