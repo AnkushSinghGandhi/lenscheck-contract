@@ -7,7 +7,7 @@
 #     #2  Customer.name  field deleted               (silent data loss)
 #     #3  a call to analytics.tracksy.io             (never declared — exfil)
 #
-#  pryti-contract catches all three: two structurally in CI, one at runtime.
+#  lenscheck-contract catches all three: two structurally in CI, one at runtime.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -22,18 +22,18 @@ echo "${b}▌ PR #128  ·  \"add order analytics\"  ·  +4 −2${r}   ${dim}look
 echo
 
 # ── export both contracts — a fresh process each, exactly like CI base vs head ──
-$PY -m pryti_contract.cli export --settings settings --root before -o /tmp/base.json >/dev/null 2>&1
-$PY -m pryti_contract.cli export --settings settings --root after  -o /tmp/head.json >/dev/null 2>&1
+$PY -m lenscheck_contract.cli export --settings settings --root before -o /tmp/base.json >/dev/null 2>&1
+$PY -m lenscheck_contract.cli export --settings settings --root after  -o /tmp/head.json >/dev/null 2>&1
 
-echo "${cyan}── Layer 2 · ${b}pryti-contract diff${r}${cyan}  (structural — runs in CI) ──${r}"
+echo "${cyan}── Layer 2 · ${b}lenscheck-contract diff${r}${cyan}  (structural — runs in CI) ──${r}"
 echo
-$PY -m pryti_contract.cli diff /tmp/base.json /tmp/head.json --markdown --fail-on risky
+$PY -m lenscheck_contract.cli diff /tmp/base.json /tmp/head.json --markdown --fail-on risky
 code=$?
 echo
 echo "   ${dim}exit $code → ${r}${b}CI blocked${r}  ${dim}(#1 auth + #2 field caught before merge)${r}"
 echo
 
-echo "${cyan}── Layer 3 · ${b}pryti-contract guard${r}${cyan}  (runtime — in the running app) ──${r}"
+echo "${cyan}── Layer 3 · ${b}lenscheck-contract guard${r}${cyan}  (runtime — in the running app) ──${r}"
 echo
 $PY guard_demo.py
 echo

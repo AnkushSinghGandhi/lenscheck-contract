@@ -10,7 +10,7 @@ from .models import Contract, Job, Route
 
 # Which handler is running right now. The guard reads this.
 current_handler: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "pryti_current_handler", default=None
+    "lenscheck_current_handler", default=None
 )
 
 
@@ -99,7 +99,7 @@ class Registry:
 
     def _instrument(self, fn: Callable[..., Any], handler: str) -> Callable[..., Any]:
         """Set the contextvar while the handler runs. Applied at most once."""
-        if getattr(fn, "__pryti_handler__", None) is not None:
+        if getattr(fn, "__lenscheck_handler__", None) is not None:
             return fn
 
         @functools.wraps(fn)
@@ -110,7 +110,7 @@ class Registry:
             finally:
                 current_handler.reset(token)
 
-        wrapper.__pryti_handler__ = handler  # type: ignore[attr-defined]
+        wrapper.__lenscheck_handler__ = handler  # type: ignore[attr-defined]
         return wrapper
 
     def declared_effects(self, handler: str | None) -> list[str]:
@@ -133,7 +133,7 @@ def handler_name(target: Any) -> str:
 
     If these three ever disagree, the guard silently stops working.
     """
-    existing = getattr(target, "__pryti_handler__", None)
+    existing = getattr(target, "__lenscheck_handler__", None)
     if existing:
         return str(existing)
     view_class = getattr(target, "view_class", None) or getattr(target, "cls", None)
@@ -157,7 +157,7 @@ def scope(name: str) -> Any:
 
 def _handler_of(fn: Callable[..., Any]) -> str:
     """Stacked decorators wrap each other; keep one identity for the same function."""
-    existing = getattr(fn, "__pryti_handler__", None)
+    existing = getattr(fn, "__lenscheck_handler__", None)
     if existing:
         return str(existing)
     return _qualname(fn)

@@ -1,7 +1,7 @@
 # 3 bad things, 0 get through
 
 One AI-written PR — *"add order analytics"* — sneaks in three dangerous changes.
-`pryti-contract` catches all three: two structurally in CI, one at runtime.
+`lenscheck-contract` catches all three: two structurally in CI, one at runtime.
 
 ![money shot](three-bad-things.gif)
 

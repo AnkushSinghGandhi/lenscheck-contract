@@ -1,7 +1,7 @@
-"""The bridge to pryti-semantic-reviewer: contract -> confirmed invariant corpus."""
-from pryti_contract import build
-from pryti_contract.invariants import _declared_destinations, to_invariant_corpus
-from pryti_contract.models import Contract, Route
+"""The bridge to lenscheck-semantic-reviewer: contract -> confirmed invariant corpus."""
+from lenscheck_contract import build
+from lenscheck_contract.invariants import _declared_destinations, to_invariant_corpus
+from lenscheck_contract.models import Contract, Route
 
 
 def _contract_with(*effects):

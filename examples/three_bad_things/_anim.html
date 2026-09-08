@@ -31,20 +31,20 @@
   <div class="term">
     <div class="spectrum"></div>
     <div class="bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
-      <span class="who">✦ <b>pryti-contract</b> · examples/three_bad_things</span></div>
+      <span class="who">✦ <b>lenscheck-contract</b> · examples/three_bad_things</span></div>
     <div class="body">
       <div class="r" data-s="1"><div class="pr">▌ PR #128 · "add order analytics" <span class="meta">· +4 −2 &nbsp;<span class="tag">looks harmless</span></span></div></div>
-      <div class="r" data-s="2"><div class="layer">── Layer 2 · <b>pryti-contract diff</b> &nbsp;(structural — runs in CI) ──</div><div class="h">### Backend contract changes</div><div>&nbsp;</div></div>
+      <div class="r" data-s="2"><div class="layer">── Layer 2 · <b>lenscheck-contract diff</b> &nbsp;(structural — runs in CI) ──</div><div class="h">### Backend contract changes</div><div>&nbsp;</div></div>
       <div class="r" data-s="3"><div class="risk">- 🔴 <code>POST /orders</code> — auth: user -&gt; public</div></div>
       <div class="r" data-s="4"><div class="risk">- 🔴 <code>shop.Customer.name</code> — field removed (data loss)</div></div>
       <div class="r" data-s="5"><div class="sub"><i>2 risky, 2 total.</i></div><div class="exit indent"><span class="h">exit 1 →</span> <b>CI blocked</b> <span class="tag">(#1 auth + #2 field caught before merge)</span></div></div>
-      <div class="r" data-s="6"><div class="layer">── Layer 3 · <b>pryti-contract guard</b> &nbsp;(runtime — in the running app) ──</div></div>
+      <div class="r" data-s="6"><div class="layer">── Layer 3 · <b>lenscheck-contract guard</b> &nbsp;(runtime — in the running app) ──</div></div>
       <div class="r" data-s="7"><div class="indent"><span class="block">⛔ BLOCKED at runtime</span> <span class="h">— the call never left the process:</span></div>
         <div class="decl indent">  shop.views.create_order performed undeclared effect <span class="eff">'net:analytics.tracksy.io'</span>.
   Declared: <span class="good">['net:api.stripe.com']</span>. Add <span class="eff">@contract.effects('net:analytics.tracksy.io')</span> or remove the call.</div></div>
       <div class="r" data-s="8"><div class="indent ok">✓ data exfiltration stopped</div></div>
       <div class="r" data-s="9"><div class="foot">▌ 3 bad things in. <span class="z">0 shipped.</span></div>
-        <div class="brand">✦ <b>pryti-contract</b> — your backend keeps a list of what it does, and can't lie about it.</div></div>
+        <div class="brand">✦ <b>lenscheck-contract</b> — your backend keeps a list of what it does, and can't lie about it.</div></div>
     </div>
   </div>
 <script>
