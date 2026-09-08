@@ -1,4 +1,4 @@
-"""pryti-contract command line."""
+"""lenscheck-contract command line."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def cmd_diff(args: argparse.Namespace) -> int:
 
 
 def cmd_invariants(args: argparse.Namespace) -> int:
-    """Emit a confirmed-invariant corpus for pryti-semantic-reviewer --invariants."""
+    """Emit a confirmed-invariant corpus for lenscheck-semantic-reviewer --invariants."""
     sys.path.insert(0, str(Path(args.root).resolve()))
     _setup_django(args.settings)
     for mod in args.import_module or []:
@@ -102,7 +102,7 @@ def cmd_suggest(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="pryti-contract", description=__doc__)
+    p = argparse.ArgumentParser(prog="lenscheck-contract", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
 
     e = sub.add_parser("export", help="write the contract as JSON")

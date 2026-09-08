@@ -1,6 +1,6 @@
-"""pryti-contract — your backend keeps a list of what it does.
+"""lenscheck-contract — your backend keeps a list of what it does.
 
-    from pryti_contract import contract
+    from lenscheck_contract import contract
 
     @contract.route("POST /orders", auth="user")
     @contract.effects("net:api.stripe.com", "email")
@@ -8,8 +8,8 @@
 
 Then::
 
-    pryti-contract export -o contract.json
-    pryti-contract diff base.json head.json
+    lenscheck-contract export -o contract.json
+    lenscheck-contract diff base.json head.json
 """
 
 from __future__ import annotations

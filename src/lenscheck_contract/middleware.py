@@ -4,7 +4,7 @@ Without this, the guard only watches views you decorated - which is backwards.
 The views you forgot to declare are exactly the ones worth watching.
 
     MIDDLEWARE = [
-        "pryti_contract.middleware.ContractMiddleware",
+        "lenscheck_contract.middleware.ContractMiddleware",
         ...
     ]
 """

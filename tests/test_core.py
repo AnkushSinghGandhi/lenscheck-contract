@@ -3,7 +3,7 @@ import socket
 
 import pytest
 
-from pryti_contract import Contract, UndeclaredEffect, contract, diff, guard, render_text
+from lenscheck_contract import Contract, UndeclaredEffect, contract, diff, guard, render_text
 
 
 @pytest.fixture(autouse=True)

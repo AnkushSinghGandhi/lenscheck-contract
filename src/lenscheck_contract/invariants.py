@@ -1,4 +1,4 @@
-"""Bridge to pryti-semantic-reviewer.
+"""Bridge to lenscheck-semantic-reviewer.
 
 The reviewer *discovers* invariants by guessing from git history, then a human
 confirms them into a JSON it enforces on every PR (`--invariants`). This hands it
@@ -6,9 +6,9 @@ the truth instead: your app's real, declared egress destinations become the
 approved allowlist, and the auth/PII rules the contract is built around are
 confirmed. Feed the output straight into the reviewer:
 
-    pryti-contract invariants --settings app.settings -o invariants.json
+    lenscheck-contract invariants --settings app.settings -o invariants.json
     # then, in the reviewer step:
-    #   pryti-semantic-reviewer ... --invariants invariants.json
+    #   lenscheck-semantic-reviewer ... --invariants invariants.json
 
 Output is the exact corpus shape the reviewer's enforce() reads: a list of
 `{"id", "statement", "severity", "confirmed", ...}` entries.
@@ -39,7 +39,7 @@ def _declared_destinations(contract: Contract) -> list[str]:
 def to_invariant_corpus(contract: Contract) -> list[dict[str, Any]]:
     """Contract -> the confirmed-invariant corpus the reviewer enforces on a PR."""
     dests = _declared_destinations(contract)
-    src = "pryti-contract runtime export"
+    src = "lenscheck-contract runtime export"
     return [
         {
             "id": "external-egress-allowlist",

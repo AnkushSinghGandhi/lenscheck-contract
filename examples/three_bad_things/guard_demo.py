@@ -10,7 +10,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "src"))                 # not needed once installed
-sys.path.insert(0, str(HERE.parents[1] / "src"))      # repo's src/ for `pryti_contract`
+sys.path.insert(0, str(HERE.parents[1] / "src"))      # repo's src/ for `lenscheck_contract`
 sys.path.insert(0, str(HERE / "after"))               # the "bad PR" app
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
@@ -18,7 +18,7 @@ import django  # noqa: E402
 
 django.setup()
 
-from pryti_contract import UndeclaredEffect, build, guard  # noqa: E402
+from lenscheck_contract import UndeclaredEffect, build, guard  # noqa: E402
 
 build()                       # load routes + declarations
 guard.install(mode="error")   # enforce: an undeclared effect must not leave the process

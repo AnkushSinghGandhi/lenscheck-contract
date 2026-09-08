@@ -20,23 +20,23 @@ jobs:
       - name: Install
         run: |
           pip install -r requirements.txt
-          pip install pryti-contract
+          pip install lenscheck-contract
 
       - name: Export contract (this PR)
-        run: pryti-contract export --settings ${{ vars.DJANGO_SETTINGS_MODULE }} -o head.json
+        run: lenscheck-contract export --settings ${{ vars.DJANGO_SETTINGS_MODULE }} -o head.json
 
       - name: Export contract (base branch)
         run: |
           git stash --include-untracked || true
           git checkout ${{ github.event.pull_request.base.sha }}
-          pryti-contract export --settings ${{ vars.DJANGO_SETTINGS_MODULE }} -o /tmp/base.json
+          lenscheck-contract export --settings ${{ vars.DJANGO_SETTINGS_MODULE }} -o /tmp/base.json
           git checkout -
           cp /tmp/base.json base.json
 
       - name: Diff
         id: diff
         run: |
-          pryti-contract diff base.json head.json --markdown > comment.md || echo "risky=1" >> "$GITHUB_OUTPUT"
+          lenscheck-contract diff base.json head.json --markdown > comment.md || echo "risky=1" >> "$GITHUB_OUTPUT"
           cat comment.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on PR

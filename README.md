@@ -1,9 +1,9 @@
-# pryti-contract
+# lenscheck-contract
 
 Your backend keeps a list of what it does. And it can't lie about it.
 
-Companion library to [pryti-semantic-reviewer](https://github.com/AnkushSinghGandhi/pryti-semantic-reviewer).
-Pryti reads code from outside and guesses. This runs inside your app and knows.
+Companion library to [lenscheck-semantic-reviewer](https://github.com/AnkushSinghGandhi/lenscheck-semantic-reviewer).
+Lenscheck reads code from outside and guesses. This runs inside your app and knows.
 
 ## What it does
 
@@ -36,7 +36,7 @@ Four lines instead of four hundred.
 ## Install
 
 ```bash
-pip install pryti-contract
+pip install lenscheck-contract
 ```
 
 ## Use it — three levels
@@ -46,7 +46,7 @@ pip install pryti-contract
 Works on an existing Django project with zero code changes.
 
 ```bash
-pryti-contract export --settings myproject.settings -o contract.json
+lenscheck-contract export --settings myproject.settings -o contract.json
 ```
 
 It reads Django's real router and real model registry. Routes built in loops,
@@ -61,7 +61,7 @@ wrote contract.json: 9 routes, 6 models, 0 jobs, auth known on 5/9
 ### Level 2: declare what matters
 
 ```python
-from pryti_contract import contract
+from lenscheck_contract import contract
 
 @contract.route("POST /orders", auth="user")
 @contract.effects("net:api.stripe.com")
@@ -76,10 +76,10 @@ they look like every Django decorator it has ever seen.
 
 ```python
 # settings.py
-MIDDLEWARE = ["pryti_contract.middleware.ContractMiddleware", ...]
+MIDDLEWARE = ["lenscheck_contract.middleware.ContractMiddleware", ...]
 
 # conftest.py or apps.py
-from pryti_contract import guard
+from lenscheck_contract import guard
 guard.install(mode="error")   # off | record | warn | error
 ```
 
@@ -101,16 +101,16 @@ json.dump(guard.suggestions(), open("observed.json", "w"))
 ```
 
 ```bash
-pryti-contract suggest observed.json     # prints the decorators to paste in
+lenscheck-contract suggest observed.json     # prints the decorators to paste in
 ```
 
 ## In CI
 
 ```yaml
-- run: pryti-contract export --settings myproject.settings -o head.json
+- run: lenscheck-contract export --settings myproject.settings -o head.json
 - run: git checkout ${{ github.base_ref }}
-- run: pryti-contract export --settings myproject.settings -o base.json
-- run: pryti-contract diff base.json head.json --markdown --fail-on risky
+- run: lenscheck-contract export --settings myproject.settings -o base.json
+- run: lenscheck-contract diff base.json head.json --markdown --fail-on risky
 ```
 
 `--fail-on risky` exits 1 on auth weakening, new outside calls, dropped fields,
@@ -144,10 +144,10 @@ Structural mistakes: this. Logic mistakes: your tests. You need both.
 ## Try it
 
 ```bash
-git clone ... && cd pryti-contract
+git clone ... && cd lenscheck-contract
 pip install -e ".[dev]"
 pytest
-cd examples/demo && pryti-contract export --settings settings --root . -o /tmp/base.json
+cd examples/demo && lenscheck-contract export --settings settings --root . -o /tmp/base.json
 ```
 
 MIT.

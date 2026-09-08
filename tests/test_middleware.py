@@ -20,7 +20,7 @@ def django_setup():
 
 @pytest.fixture(autouse=True)
 def clean_guard():
-    from pryti_contract import guard
+    from lenscheck_contract import guard
 
     guard.reset()
     yield
@@ -29,8 +29,8 @@ def clean_guard():
 
 
 def test_middleware_blocks_an_undeclared_view():
-    from pryti_contract import UndeclaredEffect, build, guard
-    from pryti_contract.middleware import ContractMiddleware
+    from lenscheck_contract import UndeclaredEffect, build, guard
+    from lenscheck_contract.middleware import ContractMiddleware
 
     build()
     guard.install(mode="error")
@@ -52,8 +52,8 @@ def test_middleware_blocks_an_undeclared_view():
 
 
 def test_middleware_allows_a_declared_view():
-    from pryti_contract import build, guard
-    from pryti_contract.middleware import ContractMiddleware
+    from lenscheck_contract import build, guard
+    from lenscheck_contract.middleware import ContractMiddleware
 
     build()
     guard.install(mode="error")
@@ -73,8 +73,8 @@ def test_middleware_allows_a_declared_view():
 
 
 def test_scope_restores_the_previous_handler():
-    from pryti_contract import scope
-    from pryti_contract.registry import current_handler
+    from lenscheck_contract import scope
+    from lenscheck_contract.registry import current_handler
 
     assert current_handler.get() is None
     with scope("a.b"):

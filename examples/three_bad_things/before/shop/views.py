@@ -2,7 +2,7 @@ import socket
 
 from django.http import HttpResponse
 
-from pryti_contract import contract
+from lenscheck_contract import contract
 
 
 @contract.route("GET /health", auth="public")
