@@ -62,7 +62,9 @@ It reads the framework's real router — routes built in loops, DRF routers, mix
 and FastAPI dependency trees are all found, because the app already resolved them at startup.
 Auth is read from Django permissions/mixins/`login_required`, Flask auth decorators
 (`flask_login`, `flask_jwt_extended`, …), and FastAPI security schemes and `Depends(...)`.
-Models come from Django's registry or, for Flask/FastAPI, your **SQLAlchemy** mapped classes.
+Models come from Django's registry, your **SQLAlchemy** mapped classes (Flask/FastAPI), and
+**Pydantic** request/response schemas (FastAPI) — so a field going optional or disappearing from an
+API body shows up in the diff.
 
 Coverage will be partial. That's reported, not hidden:
 

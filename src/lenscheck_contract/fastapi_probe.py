@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from .models import Contract, Route
+from .pydantic_probe import probe_models as probe_pydantic_models
 from .registry import handler_name
 from .sqla_probe import probe_models
 
@@ -27,7 +28,8 @@ _AUTO_METHODS = {"HEAD", "OPTIONS"}
 
 def probe(app: Any, contract: Contract | None = None) -> Contract:
     contract = contract if contract is not None else Contract()
-    probe_models(contract)
+    probe_models(contract)                                   # SQLAlchemy tables (the DB layer)
+    probe_pydantic_models(getattr(app, "routes", []), contract)  # Pydantic request/response schemas
     _probe_routes(app, contract)
     contract.recompute_coverage()
     return contract
