@@ -86,11 +86,22 @@ they look like every Django decorator it has ever seen.
 
 ### Level 3: enforce it
 
+Install the request hook for your framework (so *every* view is watched, not just decorated ones),
+then turn the guard on:
+
 ```python
-# settings.py
+# Django — settings.py
 MIDDLEWARE = ["lenscheck_contract.middleware.ContractMiddleware", ...]
 
-# conftest.py or apps.py
+# Flask
+from lenscheck_contract import install_flask
+install_flask(app)
+
+# FastAPI
+from lenscheck_contract import install_fastapi
+install_fastapi(app)
+
+# then, anywhere at startup (conftest.py, apps.py, main.py):
 from lenscheck_contract import guard
 guard.install(mode="error")   # off | record | warn | error
 ```

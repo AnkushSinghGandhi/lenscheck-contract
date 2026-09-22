@@ -27,6 +27,8 @@ __all__ = [
     "guard",
     "scope",
     "handler_name",
+    "install_flask",
+    "install_fastapi",
     "build",
     "diff",
     "render_text",
@@ -83,6 +85,20 @@ def build(
     _merge_declarations(result, contract.build())
     result.recompute_coverage()
     return result
+
+
+def install_flask(app: object) -> object:
+    """Scope the current handler for every Flask request (the guard's watch-everything layer)."""
+    from .flask_middleware import install_flask as _install
+
+    return _install(app)
+
+
+def install_fastapi(app: object) -> object:
+    """Scope the current handler for every FastAPI request (the guard's watch-everything layer)."""
+    from .fastapi_middleware import install_fastapi as _install
+
+    return _install(app)
 
 
 def _merge_declarations(runtime: Contract, declared: Contract) -> None:
