@@ -184,4 +184,15 @@ pytest
 cd examples/demo && lenscheck-contract export --settings settings --root . -o /tmp/base.json
 ```
 
+### The money shot — one bad PR, all three frameworks
+
+Each runs the same *"add order analytics"* PR that sneaks in three dangerous changes, and shows
+`lenscheck-contract` catching all three (two in CI, one at runtime):
+
+```bash
+bash examples/three_bad_things/run.sh   # Django
+bash examples/flask/run.sh              # Flask   (routes + SQLAlchemy models)
+bash examples/fastapi/run.sh            # FastAPI (dependency auth + Pydantic models + async guard)
+```
+
 MIT.
