@@ -45,9 +45,18 @@ def _framework_of(app: Any) -> str | None:
     return None
 
 
+def _load_obj(spec: str) -> Any:
+    """'package.module:attr' -> that object, no factory-calling (for a Celery app instance)."""
+    module_name, _, attr = spec.partition(":")
+    return getattr(importlib.import_module(module_name), attr or "app")
+
+
 def _build_kwargs(args: argparse.Namespace) -> dict[str, Any]:
-    """Turn CLI flags into build() keyword args, loading a Flask/FastAPI app if --app was given."""
-    kwargs: dict[str, Any] = {"include_django": not args.no_django}
+    """Turn CLI flags into build() keyword args, loading a Flask/FastAPI/Celery app if given."""
+    kwargs: dict[str, Any] = {
+        "include_django": not args.no_django,
+        "include_celery": not getattr(args, "no_celery", False),
+    }
     spec = getattr(args, "app", None)
     if spec:
         app = _load_app(spec)
@@ -60,6 +69,9 @@ def _build_kwargs(args: argparse.Namespace) -> dict[str, Any]:
             raise SystemExit(
                 f"--app {spec!r}: expected a Flask or FastAPI app, got {type(app).__name__}"
             )
+    celery_spec = getattr(args, "celery", None)
+    if celery_spec:
+        kwargs["celery_app"] = _load_obj(celery_spec)
     return kwargs
 
 
@@ -148,9 +160,11 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("-o", "--output")
     e.add_argument("--settings", help="DJANGO_SETTINGS_MODULE")
     e.add_argument("--app", help="Flask/FastAPI app to probe, e.g. myapp.main:app")
+    e.add_argument("--celery", help="Celery app to probe for jobs, e.g. myapp.celery:app")
     e.add_argument("--root", default=".", help="project root to put on sys.path")
     e.add_argument("--import-module", action="append", help="extra modules to import")
     e.add_argument("--no-django", action="store_true")
+    e.add_argument("--no-celery", action="store_true", help="skip Celery job discovery")
     e.set_defaults(func=cmd_export)
 
     d = sub.add_parser("diff", help="compare two contract files")
@@ -166,9 +180,11 @@ def main(argv: list[str] | None = None) -> int:
     inv.add_argument("-o", "--output")
     inv.add_argument("--settings", help="DJANGO_SETTINGS_MODULE")
     inv.add_argument("--app", help="Flask/FastAPI app to probe, e.g. myapp.main:app")
+    inv.add_argument("--celery", help="Celery app to probe for jobs, e.g. myapp.celery:app")
     inv.add_argument("--root", default=".", help="project root to put on sys.path")
     inv.add_argument("--import-module", action="append", help="extra modules to import")
     inv.add_argument("--no-django", action="store_true")
+    inv.add_argument("--no-celery", action="store_true", help="skip Celery job discovery")
     inv.set_defaults(func=cmd_invariants)
 
     s = sub.add_parser("suggest", help="turn a recorded run into declarations")

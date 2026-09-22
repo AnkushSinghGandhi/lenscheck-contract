@@ -58,13 +58,17 @@ lenscheck-contract export --no-django --app myapp.main:app -o contract.json
 lenscheck-contract export --no-django --app "myapp:create_app" -o contract.json
 ```
 
+Celery jobs are found automatically when Celery is installed and your tasks are imported; point at
+a specific app with `--celery myapp.celery:app`, or skip discovery with `--no-celery`.
+
 It reads the framework's real router — routes built in loops, DRF routers, mixins, blueprints,
 and FastAPI dependency trees are all found, because the app already resolved them at startup.
 Auth is read from Django permissions/mixins/`login_required`, Flask auth decorators
 (`flask_login`, `flask_jwt_extended`, …), and FastAPI security schemes and `Depends(...)`.
 Models come from Django's registry, your **SQLAlchemy** mapped classes (Flask/FastAPI), and
 **Pydantic** request/response schemas (FastAPI) — so a field going optional or disappearing from an
-API body shows up in the diff.
+API body shows up in the diff. **Celery** background jobs (tasks + beat schedules) are discovered too,
+so a new nightly job — or a task that starts calling Stripe — is caught the same way a route change is.
 
 Coverage will be partial. That's reported, not hidden:
 

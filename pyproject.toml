@@ -15,7 +15,8 @@ dependencies = []
 django = ["django>=4.2"]
 flask = ["flask>=2.2"]
 fastapi = ["fastapi>=0.100"]
-dev = ["pytest>=7", "django>=4.2", "flask>=2.2", "fastapi>=0.100", "sqlalchemy>=2.0"]
+celery = ["celery>=5.2"]
+dev = ["pytest>=7", "django>=4.2", "flask>=2.2", "fastapi>=0.100", "sqlalchemy>=2.0", "celery>=5.2"]
 
 [project.scripts]
 lenscheck-contract = "lenscheck_contract.cli:main"
