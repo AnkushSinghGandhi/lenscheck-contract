@@ -195,4 +195,11 @@ bash examples/flask/run.sh              # Flask   (routes + SQLAlchemy models)
 bash examples/fastapi/run.sh            # FastAPI (dependency auth + Pydantic models + async guard)
 ```
 
+## Contributing
+
+This is the **MIT** part of Lenscheck — **PRs welcome, no CLA needed.** New framework probes, ORM
+support, and examples are great first contributions. Report a bug and get your **name + GitHub on the
+Wall of Fame** at [lenscheck.dev](https://lenscheck.dev); merged fixes earn **stickers**. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 MIT.
