@@ -20,7 +20,7 @@ from .models import Contract, Coverage, Job, Model, Route
 from .registry import handler_name, scope
 from .registry import registry as contract
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "contract",
@@ -43,11 +43,21 @@ __all__ = [
 ]
 
 
-def build(include_django: bool = True) -> Contract:
-    """The whole contract: what Django knows at runtime, plus what you declared.
+def build(
+    include_django: bool = True,
+    flask_app: object | None = None,
+    fastapi_app: object | None = None,
+) -> Contract:
+    """The whole contract: what the framework knows at runtime, plus what you declared.
 
-    Order matters. Probing loads the URLConf, which imports your views, which is
-    what makes the decorators run. Reading the registry first would find it empty.
+    Django auto-discovers (it has a global app/URL registry), so it runs whenever it's
+    configured. Flask and FastAPI have no such registry — pass the app instance:
+
+        build(flask_app=app)      #  or
+        build(fastapi_app=app)
+
+    Order matters. Probing loads the routes, which imports your views, which is what makes
+    the decorators run. Reading the registry first would find it empty.
     """
     result = Contract()
     if include_django:
@@ -59,6 +69,16 @@ def build(include_django: bool = True) -> Contract:
             probe(result)
         except Exception:  # noqa: BLE001 - Django is optional; declarations still work
             pass
+
+    if flask_app is not None:
+        from .flask_probe import probe as flask_probe
+
+        flask_probe(flask_app, result)
+
+    if fastapi_app is not None:
+        from .fastapi_probe import probe as fastapi_probe
+
+        fastapi_probe(fastapi_app, result)
 
     _merge_declarations(result, contract.build())
     result.recompute_coverage()

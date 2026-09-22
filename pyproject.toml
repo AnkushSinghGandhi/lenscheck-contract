@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lenscheck-contract"
-version = "1.0.0"
+version = "1.1.0"
 description = "Your backend keeps a list of what it does, and cannot lie about it."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,7 +13,9 @@ dependencies = []
 
 [project.optional-dependencies]
 django = ["django>=4.2"]
-dev = ["pytest>=7", "django>=4.2"]
+flask = ["flask>=2.2"]
+fastapi = ["fastapi>=0.100"]
+dev = ["pytest>=7", "django>=4.2", "flask>=2.2", "fastapi>=0.100", "sqlalchemy>=2.0"]
 
 [project.scripts]
 lenscheck-contract = "lenscheck_contract.cli:main"

@@ -5,6 +5,10 @@ Your backend keeps a list of what it does. And it can't lie about it.
 Companion library to [lenscheck-semantic-reviewer](https://github.com/AnkushSinghGandhi/lenscheck-semantic-reviewer).
 Lenscheck reads code from outside and guesses. This runs inside your app and knows.
 
+Works with **Django**, **Flask**, and **FastAPI** — it reads whichever framework's own runtime
+state, so routers, blueprints, loops, and dependency trees are all seen exactly as the app resolved
+them. Models come from Django or SQLAlchemy.
+
 ## What it does
 
 While your app starts, it records:
@@ -43,14 +47,22 @@ pip install lenscheck-contract
 
 ### Level 1: nothing to write
 
-Works on an existing Django project with zero code changes.
+Works on an existing project with zero code changes. Point it at your app:
 
 ```bash
+# Django — reads DJANGO_SETTINGS_MODULE, the URLconf, and the model registry
 lenscheck-contract export --settings myproject.settings -o contract.json
+
+# Flask / FastAPI — point at the app object (module:attr, or a create_app factory)
+lenscheck-contract export --no-django --app myapp.main:app -o contract.json
+lenscheck-contract export --no-django --app "myapp:create_app" -o contract.json
 ```
 
-It reads Django's real router and real model registry. Routes built in loops,
-DRF routers, mixins — all found, because the app already resolved them at startup.
+It reads the framework's real router — routes built in loops, DRF routers, mixins, blueprints,
+and FastAPI dependency trees are all found, because the app already resolved them at startup.
+Auth is read from Django permissions/mixins/`login_required`, Flask auth decorators
+(`flask_login`, `flask_jwt_extended`, …), and FastAPI security schemes and `Depends(...)`.
+Models come from Django's registry or, for Flask/FastAPI, your **SQLAlchemy** mapped classes.
 
 Coverage will be partial. That's reported, not hidden:
 

@@ -24,13 +24,52 @@ def _setup_django(settings: str | None) -> None:
     django.setup()
 
 
+def _load_app(spec: str) -> Any:
+    """'package.module:app' -> the app object. Bare 'package.module' assumes attr `app`.
+    If the attr is an app factory (create_app), it's called."""
+    module_name, _, attr = spec.partition(":")
+    attr = attr or "app"
+    module = importlib.import_module(module_name)
+    obj = getattr(module, attr)
+    if _framework_of(obj) is None and callable(obj):
+        obj = obj()          # a factory like create_app()
+    return obj
+
+
+def _framework_of(app: Any) -> str | None:
+    names = {cls.__name__ for cls in type(app).__mro__}
+    if "FastAPI" in names:
+        return "fastapi"
+    if "Flask" in names:
+        return "flask"
+    return None
+
+
+def _build_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    """Turn CLI flags into build() keyword args, loading a Flask/FastAPI app if --app was given."""
+    kwargs: dict[str, Any] = {"include_django": not args.no_django}
+    spec = getattr(args, "app", None)
+    if spec:
+        app = _load_app(spec)
+        framework = _framework_of(app)
+        if framework == "fastapi":
+            kwargs["fastapi_app"] = app
+        elif framework == "flask":
+            kwargs["flask_app"] = app
+        else:
+            raise SystemExit(
+                f"--app {spec!r}: expected a Flask or FastAPI app, got {type(app).__name__}"
+            )
+    return kwargs
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     sys.path.insert(0, str(Path(args.root).resolve()))
     _setup_django(args.settings)
     for mod in args.import_module or []:
         importlib.import_module(mod)
 
-    data = build(include_django=not args.no_django).to_dict()
+    data = build(**_build_kwargs(args)).to_dict()
     text = json.dumps(data, indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(text + "\n", encoding="utf-8")
@@ -76,7 +115,7 @@ def cmd_invariants(args: argparse.Namespace) -> int:
 
     from .invariants import to_invariant_corpus
 
-    corpus = to_invariant_corpus(build(include_django=not args.no_django))
+    corpus = to_invariant_corpus(build(**_build_kwargs(args)))
     text = json.dumps(corpus, indent=2)
     if args.output:
         Path(args.output).write_text(text + "\n", encoding="utf-8")
@@ -108,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     e = sub.add_parser("export", help="write the contract as JSON")
     e.add_argument("-o", "--output")
     e.add_argument("--settings", help="DJANGO_SETTINGS_MODULE")
+    e.add_argument("--app", help="Flask/FastAPI app to probe, e.g. myapp.main:app")
     e.add_argument("--root", default=".", help="project root to put on sys.path")
     e.add_argument("--import-module", action="append", help="extra modules to import")
     e.add_argument("--no-django", action="store_true")
@@ -125,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("-o", "--output")
     inv.add_argument("--settings", help="DJANGO_SETTINGS_MODULE")
+    inv.add_argument("--app", help="Flask/FastAPI app to probe, e.g. myapp.main:app")
     inv.add_argument("--root", default=".", help="project root to put on sys.path")
     inv.add_argument("--import-module", action="append", help="extra modules to import")
     inv.add_argument("--no-django", action="store_true")
