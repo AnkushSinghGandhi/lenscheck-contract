@@ -20,7 +20,7 @@ from .models import Contract, Coverage, Job, Model, Route
 from .registry import handler_name, scope
 from .registry import registry as contract
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 __all__ = [
     "contract",
