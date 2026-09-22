@@ -70,3 +70,24 @@ def test_error_mode_blocks_the_call():
         resp = client.get("/leaky")
     assert resp.status_code == 500
     assert any(h.endswith("leaky") for h, _ in guard.violations)
+
+
+def test_async_endpoint_effect_is_caught():
+    # The real async path: an `async def` endpoint resolving a host on the event loop.
+    import asyncio
+
+    app = FastAPI()
+
+    @app.get("/aleaky")
+    async def aleaky():
+        try:
+            await asyncio.get_running_loop().getaddrinfo("api.stripe.com", 443)
+        except OSError:
+            pass
+        return {}
+
+    install_fastapi(app)
+    guard.install(mode="warn")
+    with TestClient(app) as client:
+        client.get("/aleaky")
+    assert any(h.endswith("aleaky") for h, _ in guard.violations)

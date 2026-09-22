@@ -76,7 +76,29 @@ class _Guard:
         socket.getaddrinfo = getaddrinfo  # type: ignore[assignment]
         socket.socket.connect = connect  # type: ignore[assignment,method-assign]
         self._install_smtp()
+        self._install_async()
         self._install_cache()
+
+    def _install_async(self) -> None:
+        """Async resolvers (httpx.AsyncClient, aiohttp) go through the event loop's getaddrinfo,
+        which runs the real `socket.getaddrinfo` in an executor thread — where the current-handler
+        contextvar is gone, so the socket hook can't attribute the effect. Hook the loop's
+        getaddrinfo too, so the check runs in the caller's async context (handler intact).
+
+        Note: uvloop / aiodns resolve outside `socket` entirely and are not covered — documented."""
+        try:
+            from asyncio.base_events import BaseEventLoop
+        except Exception:  # pragma: no cover - asyncio always present on supported Pythons
+            return
+        guard = self
+        self._originals["aio_getaddrinfo"] = BaseEventLoop.getaddrinfo
+
+        async def aio_getaddrinfo(self_loop: Any, host: Any, port: Any, *a: Any, **kw: Any) -> Any:
+            if isinstance(host, str):
+                guard._check(f"net:{host}", host)   # caller's context → handler is set
+            return await guard._originals["aio_getaddrinfo"](self_loop, host, port, *a, **kw)
+
+        BaseEventLoop.getaddrinfo = aio_getaddrinfo  # type: ignore[method-assign]
 
     def _install_smtp(self) -> None:
         try:
@@ -133,6 +155,10 @@ class _Guard:
             import smtplib
 
             smtplib.SMTP.sendmail = self._originals["sendmail"]  # type: ignore[method-assign]
+        if "aio_getaddrinfo" in self._originals:
+            from asyncio.base_events import BaseEventLoop
+
+            BaseEventLoop.getaddrinfo = self._originals["aio_getaddrinfo"]  # type: ignore[method-assign]
         for cls, op, orig in self._cache_patches:
             setattr(cls, op, orig)
         self._cache_patches.clear()

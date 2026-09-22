@@ -153,8 +153,13 @@ don't exist yet.
 
 - `socket.getaddrinfo` is checked **before** it runs, so a blocked call never leaves the process
 - `socket.socket.connect` catches direct-IP connections
+- the event loop's `getaddrinfo` is hooked too, so **async** clients (`httpx.AsyncClient`, `aiohttp`)
+  are caught in the endpoint's own context — not lost in a resolver thread
 - `smtplib.SMTP.sendmail` catches email
 - localhost and unix sockets are never effects, so your database doesn't trip it
+
+> Async caveat: **uvloop** and **aiodns** resolve outside Python's `socket` module entirely, so the
+> guard can't see those. Standard `asyncio` (the uvicorn default) is covered.
 
 Patterns support wildcards: `net:*.stripe.com`, `net:*`, `email`.
 
