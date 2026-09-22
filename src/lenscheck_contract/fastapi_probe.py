@@ -18,6 +18,7 @@ from .models import Contract, Route
 from .pydantic_probe import probe_models as probe_pydantic_models
 from .registry import handler_name
 from .sqla_probe import probe_models
+from .tortoise_probe import probe_models as probe_tortoise_models
 
 # A dependency callable whose name looks like this is treated as an auth check.
 _AUTH_HINTS = ("auth", "current_user", "current-user", "get_user", "login",
@@ -29,6 +30,7 @@ _AUTO_METHODS = {"HEAD", "OPTIONS"}
 def probe(app: Any, contract: Contract | None = None) -> Contract:
     contract = contract if contract is not None else Contract()
     probe_models(contract)                                   # SQLAlchemy tables (the DB layer)
+    probe_tortoise_models(contract)                          # Tortoise ORM models (async DB layer)
     probe_pydantic_models(getattr(app, "routes", []), contract)  # Pydantic request/response schemas
     _probe_routes(app, contract)
     contract.recompute_coverage()

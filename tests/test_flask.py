@@ -75,6 +75,45 @@ def test_auth_detected_from_decorator():
     assert c.routes["GET /health"].auth == "unknown"
 
 
+def test_auth_detected_on_class_based_view():
+    from flask.views import MethodView
+
+    app = flask.Flask(__name__)
+
+    class Dashboard(MethodView):
+        decorators = [_fake_login_required]            # class-level auth, the common Flask pattern
+
+        def get(self):
+            return ""
+
+    app.add_url_rule("/dashboard", view_func=Dashboard.as_view("dashboard"))
+    c = build(include_django=False, flask_app=app)
+    assert c.routes["GET /dashboard"].auth == "login_required"
+
+
+def test_jwt_extended_style_decorator_is_named():
+    def jwt_required(fn):
+        import functools
+
+        @functools.wraps(fn)
+        def wrapper(*a, **k):
+            return fn(*a, **k)
+        wrapper.__code__ = wrapper.__code__.replace(
+            co_filename="/site-packages/flask_jwt_extended/view_decorators.py"
+        )
+        return wrapper
+
+    app = flask.Flask(__name__)
+
+    @app.get("/secure")
+    @jwt_required
+    def secure():
+        return ""
+
+    c = build(include_django=False, flask_app=app)
+    assert c.routes["GET /secure"].auth == "jwt_required"
+
+
 def test_declarations_merge_over_probe():
     app = flask.Flask(__name__)
 

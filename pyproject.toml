@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lenscheck-contract"
-version = "1.2.1"
+version = "1.3.0"
 description = "Your backend keeps a list of what it does, and cannot lie about it."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,8 @@ django = ["django>=4.2"]
 flask = ["flask>=2.2"]
 fastapi = ["fastapi>=0.100"]
 celery = ["celery>=5.2"]
-dev = ["pytest>=7", "django>=4.2", "flask>=2.2", "fastapi>=0.100", "sqlalchemy>=2.0", "celery>=5.2"]
+tortoise = ["tortoise-orm>=0.19"]
+dev = ["pytest>=7", "django>=4.2", "flask>=2.2", "fastapi>=0.100", "sqlalchemy>=2.0", "celery>=5.2", "tortoise-orm>=0.19"]
 
 [project.scripts]
 lenscheck-contract = "lenscheck_contract.cli:main"

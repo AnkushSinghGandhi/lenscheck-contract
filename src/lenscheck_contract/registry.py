@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextvars
 import functools
+import inspect
 from typing import Any, Callable
 
 from .models import Contract, Job, Route
@@ -98,17 +99,31 @@ class Registry:
     # ---------- plumbing ----------
 
     def _instrument(self, fn: Callable[..., Any], handler: str) -> Callable[..., Any]:
-        """Set the contextvar while the handler runs. Applied at most once."""
+        """Set the contextvar while the handler runs. Applied at most once.
+
+        Async handlers need an async wrapper: a sync wrapper would set the contextvar, call the
+        coroutine function (which returns a coroutine *immediately*), reset the contextvar, and only
+        then would the coroutine be awaited — so the handler would be unset during the actual work.
+        """
         if getattr(fn, "__lenscheck_handler__", None) is not None:
             return fn
 
-        @functools.wraps(fn)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            token = current_handler.set(handler)
-            try:
-                return fn(*args, **kwargs)
-            finally:
-                current_handler.reset(token)
+        if inspect.iscoroutinefunction(fn):
+            @functools.wraps(fn)
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                token = current_handler.set(handler)
+                try:
+                    return await fn(*args, **kwargs)
+                finally:
+                    current_handler.reset(token)
+        else:
+            @functools.wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                token = current_handler.set(handler)
+                try:
+                    return fn(*args, **kwargs)
+                finally:
+                    current_handler.reset(token)
 
         wrapper.__lenscheck_handler__ = handler  # type: ignore[attr-defined]
         return wrapper

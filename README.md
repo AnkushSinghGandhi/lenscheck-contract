@@ -133,7 +133,39 @@ json.dump(guard.suggestions(), open("observed.json", "w"))
 lenscheck-contract suggest observed.json     # prints the decorators to paste in
 ```
 
-## In CI
+## In CI — the GitHub Action (one step)
+
+Drop this into a `pull_request` workflow. It exports the contract on the PR head and base, posts a
+**sticky comment** with what changed, and fails the build at your chosen severity.
+
+```yaml
+name: contract
+on: pull_request
+permissions: { contents: read, pull-requests: write }
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }        # base + head both needed
+      - uses: AnkushSinghGandhi/lenscheck-contract@v1
+        with:
+          settings: myproject.settings   # Django …
+          # app: myapp.main:app          # … or Flask/FastAPI (omit `settings`)
+          install: pip install -r requirements.txt
+          fail-on: risky
+```
+
+| Input | Default | What |
+|---|---|---|
+| `settings` | — | `DJANGO_SETTINGS_MODULE` (Django). Omit for Flask/FastAPI. |
+| `app` | — | Flask/FastAPI app as `module:attr` (or a `create_app` factory). |
+| `install` | — | Command to install your app's deps before probing. |
+| `fail-on` | `risky` | `never` \| `review` \| `risky` \| `any`. |
+| `comment` | `true` | Post the diff as a sticky PR comment. |
+| `root` / `python-version` | `.` / `3.11` | sys.path root · Python version. |
+
+Prefer raw steps? The Action just wraps these:
 
 ```yaml
 - run: lenscheck-contract export --settings myproject.settings -o head.json

@@ -17,6 +17,7 @@ from typing import Any
 from .models import Contract, Route
 from .registry import handler_name
 from .sqla_probe import probe_models
+from .tortoise_probe import probe_models as probe_tortoise_models
 
 # Auth decorators live in these packages; we read the wrapper's source file, which
 # functools.wraps does NOT rewrite (unlike __module__), so it still points at the decorator.
@@ -24,7 +25,11 @@ _AUTH_FILES = {
     "flask_login": "login_required",
     "flask_security": "auth_required",
     "flask_jwt_extended": "jwt_required",
+    "flask_jwt": "jwt_required",
     "flask_httpauth": "login_required",
+    "flask_praetorian": "auth_required",
+    "flask_user": "login_required",
+    "flask_principal": "permission_required",
 }
 _AUTO_METHODS = {"HEAD", "OPTIONS"}
 
@@ -32,6 +37,7 @@ _AUTO_METHODS = {"HEAD", "OPTIONS"}
 def probe(app: Any, contract: Contract | None = None) -> Contract:
     contract = contract if contract is not None else Contract()
     probe_models(contract)
+    probe_tortoise_models(contract)
     _probe_routes(app, contract)
     contract.recompute_coverage()
     return contract
@@ -64,8 +70,34 @@ def _methods_of(rule: Any) -> list[str]:
 
 
 def _auth_of(view: Any) -> str:
-    """Best-effort: follow the wrapper chain and name a known auth decorator. Else 'unknown'."""
-    fn: Any = view
+    """Best-effort: name a known auth decorator wrapping the view. Else 'unknown'.
+
+    Covers three shapes: a decorated function view, a class-based view's `decorators` list
+    (Flask `MethodView` / `View`), and Flask-RESTful/RESTX `method_decorators`.
+    """
+    label = _label_from_chain(view)
+    if label:
+        return label
+
+    view_class = getattr(view, "view_class", None)
+    if view_class is not None:
+        decorators = list(getattr(view_class, "decorators", None) or [])
+        method_decorators = getattr(view_class, "method_decorators", None) or []
+        if isinstance(method_decorators, dict):          # RESTX allows a per-method dict
+            for group in method_decorators.values():
+                decorators += list(group or [])
+        else:
+            decorators += list(method_decorators)
+        for dec in decorators:
+            label = _label_from_chain(dec)
+            if label:
+                return label
+    return "unknown"
+
+
+def _label_from_chain(fn: Any) -> str | None:
+    """Walk a function's wrapper chain; return the auth label if any layer came from a known
+    auth package (read from the wrapper's source file, which functools.wraps doesn't rewrite)."""
     seen = 0
     while fn is not None and seen < 12:
         code = getattr(fn, "__code__", None)
@@ -75,4 +107,4 @@ def _auth_of(view: Any) -> str:
                 return label
         fn = getattr(fn, "__wrapped__", None)
         seen += 1
-    return "unknown"
+    return None

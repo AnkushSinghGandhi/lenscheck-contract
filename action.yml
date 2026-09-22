@@ -1,0 +1,112 @@
+name: 'Lenscheck Contract'
+description: 'Diff your backend contract (routes, auth, models, effects, jobs) on a PR and comment what changed.'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  settings:
+    description: 'DJANGO_SETTINGS_MODULE (Django apps). Leave empty for Flask/FastAPI.'
+    required: false
+    default: ''
+  app:
+    description: 'Flask/FastAPI app as module:attr, e.g. myapp.main:app (or a create_app factory).'
+    required: false
+    default: ''
+  install:
+    description: 'Shell command to install your app deps before probing, e.g. "pip install -r requirements.txt".'
+    required: false
+    default: ''
+  root:
+    description: 'Project root to put on sys.path.'
+    required: false
+    default: '.'
+  fail-on:
+    description: 'never | review | risky | any — fail the build when a change at this severity is found.'
+    required: false
+    default: 'risky'
+  comment:
+    description: 'Post the diff as a sticky PR comment (needs pull-requests: write).'
+    required: false
+    default: 'true'
+  python-version:
+    description: 'Python to run the probe with.'
+    required: false
+    default: '3.11'
+  github-token:
+    description: 'Token used to post the PR comment.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install lenscheck-contract + app deps
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip >/dev/null
+        pip install lenscheck-contract
+        if [ -n "${{ inputs.install }}" ]; then
+          echo "installing app deps: ${{ inputs.install }}"
+          ${{ inputs.install }}
+        fi
+
+    - name: Export contracts (head vs base) and diff
+      id: diff
+      shell: bash
+      env:
+        LC_SETTINGS: ${{ inputs.settings }}
+        LC_APP: ${{ inputs.app }}
+        LC_ROOT: ${{ inputs.root }}
+        LC_FAIL_ON: ${{ inputs.fail-on }}
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        set -e
+        FW="--root $LC_ROOT"
+        if [ -n "$LC_SETTINGS" ]; then FW="$FW --settings $LC_SETTINGS"; else FW="$FW --no-django"; fi
+        if [ -n "$LC_APP" ]; then FW="$FW --app $LC_APP"; fi
+        echo "framework flags:$FW"
+
+        HEAD_SHA="$(git rev-parse HEAD)"
+        lenscheck-contract export $FW -o /tmp/lc_head.json
+
+        git fetch --depth=1 origin "$BASE_REF"
+        git checkout -q FETCH_HEAD
+        lenscheck-contract export $FW -o /tmp/lc_base.json
+        git checkout -q "$HEAD_SHA"
+
+        set +e
+        lenscheck-contract diff /tmp/lc_base.json /tmp/lc_head.json --markdown --fail-on "$LC_FAIL_ON" > /tmp/lc_comment.md
+        echo "exit=$?" >> "$GITHUB_OUTPUT"
+        echo "---- contract diff ----"; cat /tmp/lc_comment.md
+
+    - name: Comment on the PR
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- lenscheck-contract -->';
+          const body = marker + '\n' + fs.readFileSync('/tmp/lc_comment.md', 'utf8');
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+          const prev = comments.find(c => c.body && c.body.includes(marker));
+          if (prev) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: prev.id, body });
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+
+    - name: Enforce fail-on
+      shell: bash
+      run: |
+        if [ "${{ steps.diff.outputs.exit }}" != "0" ]; then
+          echo "::error::Backend contract changed at severity '${{ inputs.fail-on }}' — see the PR comment."
+          exit 1
+        fi
