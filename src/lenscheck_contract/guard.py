@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import fnmatch
 import socket
+import contextvars
 import threading
 import warnings
 from typing import Any, Iterable
@@ -77,6 +78,7 @@ class _Guard:
         socket.socket.connect = connect  # type: ignore[assignment,method-assign]
         self._install_smtp()
         self._install_async()
+        self._install_threads()
         self._install_cache()
 
     def _install_async(self) -> None:
@@ -99,6 +101,21 @@ class _Guard:
             return await guard._originals["aio_getaddrinfo"](self_loop, host, port, *a, **kw)
 
         BaseEventLoop.getaddrinfo = aio_getaddrinfo  # type: ignore[method-assign]
+
+    def _install_threads(self) -> None:
+        """A handler that fans work out to a `ThreadPoolExecutor` (or `loop.run_in_executor`, which calls
+        `submit`) loses the current-handler contextvar in the worker thread, so its effects would be
+        recorded as `<no handler>` and never enforced. Run each submitted callable in a copy of the
+        submitter's context, as `asyncio.to_thread` does. A plain `threading.Thread` started from a
+        handler is still not covered: pass a context in yourself, or use an executor."""
+        from concurrent.futures import ThreadPoolExecutor
+        self._originals["tpe_submit"] = ThreadPoolExecutor.submit
+        original = ThreadPoolExecutor.submit
+
+        def submit(self_: Any, fn: Any, /, *a: Any, **kw: Any) -> Any:
+            return original(self_, contextvars.copy_context().run, fn, *a, **kw)
+
+        ThreadPoolExecutor.submit = submit  # type: ignore[method-assign]
 
     def _install_smtp(self) -> None:
         try:
@@ -151,6 +168,10 @@ class _Guard:
         if "getaddrinfo" in self._originals:
             socket.getaddrinfo = self._originals["getaddrinfo"]  # type: ignore[assignment]
             socket.socket.connect = self._originals["connect"]  # type: ignore[method-assign]
+        if "tpe_submit" in self._originals:
+            from concurrent.futures import ThreadPoolExecutor
+
+            ThreadPoolExecutor.submit = self._originals["tpe_submit"]  # type: ignore[method-assign]
         if "sendmail" in self._originals:
             import smtplib
 
