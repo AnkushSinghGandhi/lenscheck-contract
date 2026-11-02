@@ -200,13 +200,31 @@ don't exist yet.
 - `socket.socket.connect` catches direct-IP connections
 - the event loop's `getaddrinfo` is hooked too, so **async** clients (`httpx.AsyncClient`, `aiohttp`)
   are caught in the endpoint's own context — not lost in a resolver thread
+- work a handler hands to a **`ThreadPoolExecutor`** (and `loop.run_in_executor`, which uses it) keeps the
+  handler, as `asyncio.to_thread` does: each submitted call runs in a copy of the submitter's context
 - `smtplib.SMTP.sendmail` catches email
 - localhost and unix sockets are never effects, so your database doesn't trip it
 
 > Async caveat: **uvloop** and **aiodns** resolve outside Python's `socket` module entirely, so the
 > guard can't see those. Standard `asyncio` (the uvicorn default) is covered.
+>
+> Thread caveat: a plain **`threading.Thread`** started from a handler starts with an empty context, so
+> its effects are recorded under `<no handler>` (visible in `suggestions()`, never enforced). Use an
+> executor, or run the thread's body inside `contextvars.copy_context().run(...)`.
 
 Patterns support wildcards: `net:*.stripe.com`, `net:*`, `email`.
+
+## The contract file
+
+`lenscheck-contract export -o contract.json` writes JSON with `schema_version`, `routes`, `models`,
+`jobs`, `coverage`, plus a `meta` block (`lenscheck_contract`, `python`, and the versions of whichever of
+Django, Flask, FastAPI, SQLAlchemy, Pydantic, Celery, Tortoise are installed).
+
+- The contract is **byte-identical for identical code**. `meta` is informational and is the only part that
+  depends on your environment (no timestamps); `diff` ignores it.
+- **Compatibility:** adding a key doesn't change `schema_version`, and readers ignore keys they don't know.
+  Renaming or removing a key, or changing what a value means, bumps `schema_version` (currently 2). Compare
+  files exported by the same `schema_version`.
 
 ## What it does not catch
 

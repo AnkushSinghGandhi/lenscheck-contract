@@ -6,8 +6,10 @@ import argparse
 import importlib
 import json
 import os
+import platform
 import sys
 from pathlib import Path
+from typing import Any
 
 from . import build
 from .diff import RISKY, REVIEW, diff, render_markdown, render_text, worst
@@ -75,6 +77,27 @@ def _build_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return kwargs
 
 
+_FRAMEWORKS = ("django", "flask", "fastapi", "sqlalchemy", "pydantic", "celery", "tortoise-orm")
+
+
+def _meta() -> dict[str, Any]:
+    """Which tool and runtime produced an export: informational only (`diff` ignores it), and kept out of
+    `Contract.to_dict()` so the contract itself stays byte-identical for identical code. No timestamps."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    def ver(name: str) -> str | None:
+        try:
+            return version(name)
+        except PackageNotFoundError:
+            return None
+
+    return {
+        "lenscheck_contract": ver("lenscheck-contract"),
+        "python": platform.python_version(),
+        "frameworks": {n: v for n in _FRAMEWORKS if (v := ver(n))},
+    }
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     sys.path.insert(0, str(Path(args.root).resolve()))
     _setup_django(args.settings)
@@ -82,7 +105,7 @@ def cmd_export(args: argparse.Namespace) -> int:
         importlib.import_module(mod)
 
     data = build(**_build_kwargs(args)).to_dict()
-    text = json.dumps(data, indent=2, sort_keys=True)
+    text = json.dumps({**data, "meta": _meta()}, indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(text + "\n", encoding="utf-8")
         cov = data["coverage"]

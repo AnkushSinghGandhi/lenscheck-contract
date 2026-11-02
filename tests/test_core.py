@@ -198,3 +198,19 @@ def test_new_cache_effect_is_lower_severity_than_network():
     assert sev["new effect: cache:write"] == "review"      # invalidation → worth a look
     assert sev["new effect: cache:read"] == "info"         # read → informational
     assert sev["new effect: net:api.x.com"] == "risky"     # outbound network → risky
+
+
+def test_export_adds_a_meta_block_that_diff_ignores_and_the_contract_does_not_carry(tmp_path):
+    import json as _json
+    from lenscheck_contract.cli import _meta, main
+    from lenscheck_contract.diff import diff
+
+    out = tmp_path / "c.json"
+    assert main(["export", "-o", str(out), "--no-django", "--no-celery"]) == 0
+    data = _json.loads(out.read_text())
+    assert set(data["meta"]) == {"lenscheck_contract", "python", "frameworks"}
+    assert data["meta"]["python"].count(".") >= 1 and "generated_at" not in data["meta"]
+    assert "meta" not in contract.build().to_dict()                  # the contract itself stays stable
+    other = dict(data, meta={**data["meta"], "python": "0.0.0", "frameworks": {"django": "0.0"}})
+    assert diff(Contract.from_dict(data), Contract.from_dict(other)) == []   # meta never makes a change
+    assert _meta() == _meta()                                        # deterministic within an environment
