@@ -165,6 +165,19 @@ jobs:
 | `comment` | `true` | Post the diff as a sticky PR comment. |
 | `root` / `python-version` | `.` / `3.11` | sys.path root · Python version. |
 
+**Security: this step runs your app's code.** Exporting a contract imports your app (settings,
+app factory, startup hooks) on both the PR head and the base, and `install` runs whatever command
+you give it. That is the PR author's code. So:
+
+- Trigger it on `pull_request`, never `pull_request_target` (which runs with your repo's secrets
+  and write token on code from forks).
+- Give the job no secrets and only the permissions above (`contents: read`, `pull-requests: write`);
+  point the app at a throwaway database/settings for CI, never production.
+- The effect guard records and blocks *undeclared* effects; it is not a sandbox. Restrict outbound
+  network on the runner if untrusted contributors can open PRs.
+- Pin the Action to a tag (`@v1`) or, for fully reproducible builds, a full commit SHA. It installs
+  `lenscheck-contract` from its own checkout, so the version always matches what you pinned.
+
 Prefer raw steps? The Action just wraps these:
 
 ```yaml
